@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, type ReactElement } from "react";
 import { Input } from "@/components/ui/input";
 import {
   ChevronRight,
@@ -498,7 +498,7 @@ export function VariableDropdown({
     return pathParts.join(" > ");
   };
 
-  const renderNode = (node: VariableNode, level: number = 0, parentPath: string[] = []): JSX.Element | null => {
+  const renderNode = (node: VariableNode, level: number = 0, parentPath: string[] = []): ReactElement | null => {
     const nodeId = `${node.type}-${node.id}`;
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(nodeId);
