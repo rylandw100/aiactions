@@ -301,7 +301,7 @@ export function generateAIPromptVariables(
       .filter((prop) => prop.name.trim() !== "")
       .map((prop) => {
         // Map JSON schema types to field types
-        let fieldType = "string";
+        let fieldType: "string" | "number" | "boolean" | "object" | "date" | "array" = "string";
         if (prop.type === "NUM") fieldType = "number";
         else if (prop.type === "BOOL") fieldType = "boolean";
         else if (prop.type === "OBJ") fieldType = "object";
@@ -311,7 +311,7 @@ export function generateAIPromptVariables(
           id: `ai-json-${prop.name}`,
           name: prop.name,
           type: "field" as const,
-          fieldType,
+          fieldType: fieldType as "string" | "number" | "boolean" | "object" | "date" | "array",
           path: {
             step: "aiPrompt",
             object: "AI prompt output",
