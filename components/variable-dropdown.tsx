@@ -13,12 +13,10 @@ import {
   ToggleLeft,
   Box,
   List,
-  Zap,
-  Sparkles,
-  Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { VariablePath, VariableNode } from "./variable-picker";
+import { TriggerIcon, AIIcon, SMSIcon } from "@/components/icons";
 
 type VariableDropdownProps = {
   availableSteps: VariableNode[];
@@ -481,11 +479,11 @@ export function VariableDropdown({
     const iconClass = "size-5 text-gray-700";
     switch (stepIcon) {
       case "zap":
-        return <Zap className={iconClass} />;
+        return <TriggerIcon className={iconClass} />;
       case "sparkles":
-        return <Sparkles className={iconClass} />;
+        return <AIIcon className={iconClass} />;
       case "smartphone":
-        return <Smartphone className={iconClass} />;
+        return <SMSIcon className={iconClass} />;
       default:
         return null;
     }
@@ -742,11 +740,11 @@ export function VariableDropdown({
               const iconClass = "size-5 text-gray-700";
               switch (stepIcon) {
                 case "zap":
-                  return <Zap className={iconClass} />;
+                  return <TriggerIcon className={iconClass} />;
                 case "sparkles":
-                  return <Sparkles className={iconClass} />;
+                  return <AIIcon className={iconClass} />;
                 case "smartphone":
-                  return <Smartphone className={iconClass} />;
+                  return <SMSIcon className={iconClass} />;
                 default:
                   return null;
               }

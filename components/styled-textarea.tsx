@@ -253,8 +253,8 @@ export function StyledTextarea({
         onInput={handleInput}
         onPaste={handlePaste}
         onKeyDown={onKeyDown}
-        className={cn(
-          "w-full min-h-[251px] resize-y border border-[#bfbebe] rounded-md bg-white px-3 py-2 text-base outline-none focus:ring-2 focus:ring-[#5aa5e7] focus:border-[#5aa5e7]",
+          className={cn(
+          "w-full min-h-[251px] resize-y border border-[#CCCCCC] rounded-md bg-white px-3 py-2 text-base outline-none focus:ring-2 focus:ring-[#5aa5e7] focus:border-[#5aa5e7]",
           "overflow-y-auto",
           className
         )}

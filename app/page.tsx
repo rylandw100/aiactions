@@ -11,21 +11,17 @@ import { VariableDropdown } from "@/components/variable-dropdown";
 import { StyledTextarea } from "@/components/styled-textarea";
 import { getAvailableSteps, SelectedNode } from "@/lib/variables";
 import {
-  X,
   Edit,
   MoreHorizontal,
   ChevronDown,
   Search,
-  Zap,
-  Smartphone,
   ZoomIn,
   ZoomOut,
   Maximize2,
-  Sparkles,
   HelpCircle,
-  Trash2,
   Code,
 } from "lucide-react";
+import { TriggerIcon, AIIcon, SMSIcon, CloseIcon, TrashIcon } from "@/components/icons";
 
 export default function Home() {
   const [selectedNode, setSelectedNode] = useState<SelectedNode>("aiPrompt");
@@ -409,7 +405,7 @@ export default function Home() {
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-50">
         {/* Top Bar */}
-        <div className="h-14 bg-[#502d3c] flex items-center justify-between px-4">
+        <div className="h-14 bg-[#7A005D] flex items-center justify-between px-4">
           <div className="flex items-center gap-4">
             <div className="text-white font-medium">Rippling</div>
             <div className="relative">
@@ -439,10 +435,9 @@ export default function Home() {
         {/* Navigation Bar */}
         <div className="h-18 bg-white border-b border-[#e0dede] flex items-center justify-between px-[18px] py-3">
           <div className="flex items-center gap-3">
-            <X className="size-6 text-black cursor-pointer" />
+            <CloseIcon className="size-6 text-black cursor-pointer" />
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-medium text-black">Custom workflow 1</h1>
-              <Edit className="size-6 text-black cursor-pointer" />
             </div>
           </div>
           <div className="flex items-center gap-6">
@@ -451,7 +446,7 @@ export default function Home() {
               <span className="text-sm text-[#595555]">Unpublished</span>
             </div>
             <div className="w-px h-6 bg-[#e0dede]" />
-            <Button className="bg-[#512f3e] text-white hover:bg-[#512f3e]/90 h-10">
+            <Button className="bg-[#7A005D] text-white hover:bg-[#7A005D]/90 h-10">
               Save
             </Button>
             <MoreHorizontal className="size-6 text-[#8c8888] cursor-pointer" />
@@ -469,7 +464,7 @@ export default function Home() {
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-medium text-black">Trigger details</h2>
-                    <X className="size-6 text-black cursor-pointer" onClick={() => setSelectedNode("aiPrompt")} />
+                    <CloseIcon className="size-6 text-black cursor-pointer" onClick={() => setSelectedNode("aiPrompt")} />
                   </div>
                 </div>
                 <div className="bg-[#e0dede] h-px mb-6" />
@@ -479,7 +474,7 @@ export default function Home() {
                     <p className="text-sm text-black mb-4">This workflow will trigger based on the following event</p>
                     <div className="bg-white border border-[#e0dede] rounded-lg h-[72px] px-6 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Zap className="size-6 text-[#716f6c]" />
+                        <TriggerIcon className="size-6 text-[#716f6c]" />
                         <p className="text-sm font-medium text-black">rwebb_object is created</p>
                       </div>
                       <Button variant="ghost" className="text-[#4a6ba6] hover:text-[#4a6ba6]">
@@ -498,7 +493,7 @@ export default function Home() {
                     <h2 className="text-xl font-medium text-black">AI prompt</h2>
                     <div className="flex items-center gap-4">
                       <span className="text-sm text-black">ID: 12</span>
-                      <X className="size-6 text-black cursor-pointer" />
+                      <CloseIcon className="size-6 text-black cursor-pointer" />
                     </div>
                   </div>
                   <p className="text-sm text-black mb-6">
@@ -527,7 +522,7 @@ export default function Home() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-7 text-xs border-[#bfbebe]"
+                        className="h-6 text-xs bg-white border border-black/20 rounded-md px-2 gap-1 flex items-center justify-center"
                         onClick={() => {
                           // Save current cursor position
                           const textarea = document.getElementById("prompt-textarea");
@@ -643,7 +638,7 @@ export default function Home() {
                           }
                         }
                       }}
-                      className="w-full min-h-[251px] resize-y border-[#bfbebe]"
+                      className="w-full min-h-[251px] resize-y border-[#CCCCCC]"
                     />
                   </div>
 
@@ -655,7 +650,7 @@ export default function Home() {
                       <select
                         value={outputFormat}
                         onChange={(e) => setOutputFormat(e.target.value)}
-                        className="w-full h-10 px-3 py-2 text-sm border border-[#bfbebe] rounded-md bg-white appearance-none pr-10 focus:outline-none focus:ring-2 focus:ring-[#5aa5e7] focus:border-[#5aa5e7]"
+                        className="w-full h-10 px-3 py-2 text-sm border border-[#CCCCCC] rounded-md bg-white appearance-none pr-10 focus:outline-none focus:ring-2 focus:ring-[#5aa5e7] focus:border-[#5aa5e7]"
                       >
                         <option value="Text">Text</option>
                         <option value="JSON">JSON</option>
@@ -705,7 +700,7 @@ export default function Home() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-6 text-xs border-[#d3d3d3] disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="h-6 text-xs bg-white border border-black/20 rounded-md px-2 gap-1 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={isGeneratingSchema}
                             onClick={() => setShowGeneratePopover(!showGeneratePopover)}
                           >
@@ -724,12 +719,12 @@ export default function Home() {
                                 placeholder="Describe how you want the model to respond, and we'll generate a JSON schema"
                                 value={generatePrompt}
                                 onChange={(e) => setGeneratePrompt(e.target.value)}
-                                className="w-full min-h-[80px] max-h-[200px] resize-none border-[#bfbebe] text-sm overflow-y-auto"
+                                className="w-full min-h-[80px] max-h-[200px] resize-none border-[#CCCCCC] text-sm overflow-y-auto"
                               />
                               <div className="flex justify-end">
                                 <Button
                                   type="button"
-                                  className="bg-[#512f3e] text-white hover:bg-[#512f3e]/90 h-9 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="bg-[#7A005D] text-white hover:bg-[#7A005D]/90 h-9 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
                                   disabled={isGeneratingSchema}
                                   onClick={async () => {
                                     if (generatePrompt.trim() && !isGeneratingSchema) {
@@ -814,7 +809,7 @@ export default function Home() {
                                       )
                                     );
                                   }}
-                                  className="w-full h-10 px-3 py-2 text-sm border border-[#bfbebe] rounded-md bg-white appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-[#5aa5e7] focus:border-[#5aa5e7]"
+                                  className="w-full h-10 px-3 py-2 text-sm border border-[#CCCCCC] rounded-md bg-white appearance-none pr-8 focus:outline-none focus:ring-2 focus:ring-[#5aa5e7] focus:border-[#5aa5e7]"
                                 >
                                   <option value="STR">STR</option>
                                   <option value="NUM">NUM</option>
@@ -849,7 +844,7 @@ export default function Home() {
                                   );
                                 }}
                               >
-                                <Trash2 className="size-4" />
+                                <TrashIcon className="size-4" />
                               </Button>
                             </div>
                           ))
@@ -859,7 +854,7 @@ export default function Home() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-9 text-sm border-[#d3d3d3]"
+                            className="w-[129px] h-8 text-sm bg-white border border-black/20 rounded-md px-3 gap-1.5 flex items-center justify-center"
                             onClick={() => {
                               setJsonProperties([
                                 ...jsonProperties,
@@ -880,7 +875,7 @@ export default function Home() {
 
                       {/* Advanced Mode */}
                       {jsonSchemaMode === "advanced" && (
-                        <div className="border border-[#bfbebe] rounded-lg bg-white overflow-hidden">
+                        <div className="border border-[#CCCCCC] rounded-lg bg-white overflow-hidden">
                           {isGeneratingSchema ? (
                             <div className="p-4 space-y-2">
                               <div className="h-4 bg-[#e1d8d2] rounded w-[76px]" />
@@ -933,7 +928,7 @@ export default function Home() {
                     <h2 className="text-xl font-medium text-black">Send an SMS</h2>
                     <div className="flex items-center gap-4">
                       <span className="text-sm text-black">ID: 12</span>
-                      <X className="size-6 text-black cursor-pointer" />
+                      <CloseIcon className="size-6 text-black cursor-pointer" />
                     </div>
                   </div>
                 </div>
@@ -945,7 +940,7 @@ export default function Home() {
                     </label>
                     <Input
                       defaultValue="SMS 1"
-                      className="w-full border-[#bfbebe]"
+                      className="w-full border-[#CCCCCC]"
                     />
                   </div>
 
@@ -956,7 +951,7 @@ export default function Home() {
                         <label className="block text-sm font-medium text-black mb-2">
                           Recipients <span className="text-[#c3402c]">*</span>
                         </label>
-                        <div className="bg-white border border-[#bfbebe] rounded p-4">
+                        <div className="bg-white border border-[#CCCCCC] rounded p-4">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
                               <span className="text-sm text-[#595555]">To</span>
@@ -965,10 +960,9 @@ export default function Home() {
                                 <div className="w-px h-4 bg-[#e3e3e3]" />
                                 <span className="text-[10px] text-[#565659] opacity-80">AND</span>
                                 <span>United States</span>
-                                <X className="size-4 cursor-pointer" />
+                                <CloseIcon className="size-4 cursor-pointer" />
                               </div>
                             </div>
-                            <Edit className="size-6 text-[#502d3c] cursor-pointer" />
                           </div>
                         </div>
                       </div>
@@ -983,7 +977,7 @@ export default function Home() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-7 text-xs border-[#bfbebe]"
+                            className="h-6 text-xs bg-white border border-black/20 rounded-md px-2 gap-1 flex items-center justify-center"
                             onClick={() => {
                               // Save current cursor position
                               const textarea = document.getElementById("sms-message");
@@ -1096,7 +1090,7 @@ export default function Home() {
                               }
                             }
                           }}
-                          className="w-full h-[204px] border-[#bfbebe] resize-none"
+                          className="w-full h-[204px] border-[#CCCCCC] resize-none"
                           placeholder="Enter your message here..."
                         />
                       </div>
@@ -1154,9 +1148,9 @@ export default function Home() {
               <Button variant="outline" className="border-[#d3d3d3] h-10">
                 Cancel
               </Button>
-              <Button className="bg-[#512f3e] text-white hover:bg-[#512f3e]/90 h-10">
-                Save
-              </Button>
+            <Button className="bg-[#7A005D] text-white hover:bg-[#7A005D]/90 h-10">
+              Save
+            </Button>
             </div>
           </div>
         </div>
@@ -1168,13 +1162,13 @@ export default function Home() {
             <Card 
               className={`w-[250px] h-[62px] border flex items-center shadow-none rounded-md cursor-pointer transition-all ${
                 selectedNode === "trigger" 
-                  ? "border-2 border-[#1e4aa9] bg-white opacity-100" 
+                  ? "border-2 border-[#5aa5e7] bg-white opacity-100" 
                   : "opacity-40 border-[#e0dede]"
               }`}
               onClick={() => setSelectedNode("trigger")}
             >
               <div className="px-3 flex items-center gap-3 w-full h-full">
-                <Zap className={`size-6 shrink-0 ${selectedNode === "trigger" ? "text-black" : "text-[#8c8888]"}`} />
+                <TriggerIcon className={`size-6 shrink-0 ${selectedNode === "trigger" ? "text-black" : "text-[#8c8888]"}`} />
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                   <p className="text-xs text-[#595555] leading-tight">Workflow trigger</p>
                   <p className="text-sm font-medium text-black truncate leading-tight">rwebb_object is created</p>
@@ -1201,7 +1195,7 @@ export default function Home() {
               onClick={() => setSelectedNode("aiPrompt")}
             >
               <div className="px-3 flex items-center gap-3 w-full h-full">
-                <Sparkles className={`size-6 shrink-0 ${selectedNode === "aiPrompt" ? "text-[#502d3c]" : "text-[#8c8888]"}`} />
+                <AIIcon className={`size-6 shrink-0 ${selectedNode === "aiPrompt" ? "" : "opacity-40"}`} />
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                   <p className="text-xs text-[#595555] leading-tight">AI step</p>
                   <p className="text-sm font-medium text-black truncate leading-tight">AI prompt</p>
@@ -1222,13 +1216,13 @@ export default function Home() {
             <Card 
               className={`w-[250px] h-[62px] border flex items-center shadow-none rounded-md cursor-pointer transition-all ${
                 selectedNode === "sms" 
-                  ? "border-2 border-[#1e4aa9] bg-white opacity-100" 
+                  ? "border-2 border-[#5aa5e7] bg-white opacity-100" 
                   : "opacity-40 border-[#e0dede]"
               }`}
               onClick={() => setSelectedNode("sms")}
             >
               <div className="px-3 flex items-center gap-3 w-full h-full">
-                <Smartphone className={`size-6 shrink-0 ${selectedNode === "sms" ? "text-black" : "text-[#8c8888]"}`} />
+                <SMSIcon className={`size-6 shrink-0 ${selectedNode === "sms" ? "text-black" : "text-[#8c8888]"}`} />
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                   <p className="text-xs text-[#595555] leading-tight">Send an SMS</p>
                   <p className="text-sm font-medium text-black truncate leading-tight">SMS 1</p>
