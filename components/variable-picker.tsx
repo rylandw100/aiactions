@@ -178,7 +178,7 @@ export function VariablePicker({
 
   const currentStepData = filteredSteps.find((s) => s.id === currentStep);
 
-  const renderNode = (node: VariableNode, level: number = 0): JSX.Element | null => {
+  const renderNode = (node: VariableNode, level: number = 0): ReactElement | null => {
     const nodeId = `${node.type}-${node.id}`;
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(nodeId);
