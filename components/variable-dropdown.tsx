@@ -759,82 +759,92 @@ export function VariableDropdown({
       )}
 
       <div className="flex-1 overflow-y-auto p-2">
-        <div className="space-y-0">
-          {filteredSteps.map((step) => {
-            // Only render the step node itself, not its children initially
-            const stepNodeId = `step-${step.id}`;
-            const isCurrentStep = currentStep === step.id;
-            const getStepIcon = (stepIcon?: string) => {
-              const iconClass = "size-5 text-gray-700";
-              switch (stepIcon) {
-                case "zap":
-                  return <TriggerIcon className={iconClass} />;
-                case "sparkles":
-                  return <AIIcon className={iconClass} />;
-                case "smartphone":
-                  return <SMSIcon className={iconClass} />;
-                default:
-                  return null;
-              }
-            };
+        {searchQuery.trim() && filteredSteps.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <Search className="size-12 text-gray-300 mb-4" />
+            <p className="text-sm font-medium text-gray-900 mb-1">No results found</p>
+            <p className="text-xs text-gray-500 text-center">
+              No variables match "{searchQuery}". Try a different search term.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-0">
+            {filteredSteps.map((step) => {
+              // Only render the step node itself, not its children initially
+              const stepNodeId = `step-${step.id}`;
+              const isCurrentStep = currentStep === step.id;
+              const getStepIcon = (stepIcon?: string) => {
+                const iconClass = "size-5 text-gray-700";
+                switch (stepIcon) {
+                  case "zap":
+                    return <TriggerIcon className={iconClass} />;
+                  case "sparkles":
+                    return <AIIcon className={iconClass} />;
+                  case "smartphone":
+                    return <SMSIcon className={iconClass} />;
+                  default:
+                    return null;
+                }
+              };
 
-            const isFocused = openedViaHotkey && focusedIndex >= 0 && navigableItemsRef.current[focusedIndex]?.nodeId === stepNodeId;
-            return (
-              <div key={stepNodeId} className="mb-0.5">
-                <button
-                  type="button"
-                  data-navigable-id={stepNodeId}
-                  onClick={() => {
-                    const newStep = isCurrentStep ? null : step.id;
-                    setCurrentStep(newStep);
-                    if (newStep) {
-                      setExpandedNodes(new Set([stepNodeId]));
-                    } else {
-                      setExpandedNodes(new Set());
-                    }
-                  }}
-                  onMouseEnter={() => {
-                    if (openedViaHotkey) {
-                      const index = navigableItemsRef.current.findIndex(item => item.nodeId === stepNodeId);
-                      if (index >= 0) {
-                        setFocusedIndex(index);
+              const isFocused = openedViaHotkey && focusedIndex >= 0 && navigableItemsRef.current[focusedIndex]?.nodeId === stepNodeId;
+              return (
+                <div key={stepNodeId} className="mb-0.5">
+                  <button
+                    type="button"
+                    data-navigable-id={stepNodeId}
+                    onClick={() => {
+                      const newStep = isCurrentStep ? null : step.id;
+                      setCurrentStep(newStep);
+                      if (newStep) {
+                        setExpandedNodes(new Set([stepNodeId]));
+                      } else {
+                        setExpandedNodes(new Set());
                       }
-                    }
-                  }}
-                  className={cn(
-                    "w-full flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-gray-50 text-left transition-colors",
-                    isCurrentStep && "bg-gray-50",
-                    isFocused && "bg-blue-50"
-                  )}
-                >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    {getStepIcon(step.stepIcon)}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-900">
-                          {step.stepName || step.name}
-                        </span>
-                        {step.stepId && (
-                          <span className="text-xs text-gray-500">{step.stepId}</span>
-                        )}
+                    }}
+                    onMouseEnter={() => {
+                      if (openedViaHotkey) {
+                        const index = navigableItemsRef.current.findIndex(item => item.nodeId === stepNodeId);
+                        if (index >= 0) {
+                          setFocusedIndex(index);
+                        }
+                      }
+                    }}
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-gray-50 text-left transition-colors",
+                      isCurrentStep && "bg-gray-50",
+                      isFocused && "bg-blue-50"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {getStepIcon(step.stepIcon)}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900">
+                            {step.stepName || step.name}
+                          </span>
+                          {step.stepId && (
+                            <span className="text-xs text-gray-500">{step.stepId}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {isCurrentStep ? (
-                    <ChevronDown className="size-4 text-gray-500 flex-shrink-0" />
-                  ) : (
-                    <ChevronRight className="size-4 text-gray-500 flex-shrink-0" />
+                    {isCurrentStep ? (
+                      <ChevronDown className="size-4 text-gray-500 flex-shrink-0" />
+                    ) : (
+                      <ChevronRight className="size-4 text-gray-500 flex-shrink-0" />
+                    )}
+                  </button>
+                  {isCurrentStep && step.children && (
+                    <div className="mt-0.5">
+                      {step.children.map((child) => renderNode(child, 0, [step.name]))}
+                    </div>
                   )}
-                </button>
-                {isCurrentStep && step.children && (
-                  <div className="mt-0.5">
-                    {step.children.map((child) => renderNode(child, 0, [step.name]))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

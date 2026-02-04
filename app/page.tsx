@@ -568,12 +568,71 @@ export default function Home() {
 
   // Helper function to generate schema from prompt
   function generateSchemaFromPrompt(prompt: string): Record<string, any> {
-    // Simple heuristic-based generation
-    // In a real implementation, this would call an AI service
-    const properties: Record<string, any> = {};
-    
-    // Look for common patterns in the prompt
     const lowerPrompt = prompt.toLowerCase();
+    
+    // Check for welcome message pattern
+    const isWelcomeMessage = lowerPrompt.includes("welcome") && 
+                             (lowerPrompt.includes("employee") || lowerPrompt.includes("newly hired")) &&
+                             lowerPrompt.includes("message");
+    
+    if (isWelcomeMessage) {
+      // Extract employee fields from prompt
+      const employeeFields: Record<string, any> = {};
+      
+      // Check if prompt explicitly lists the fields (name, role, team, start date)
+      const hasExplicitFieldList = lowerPrompt.includes("name") && 
+                                    lowerPrompt.includes("role") && 
+                                    lowerPrompt.includes("team") && 
+                                    (lowerPrompt.includes("start date") || lowerPrompt.includes("start_date"));
+      
+      // Always include name if mentioned or if it's a welcome message with employee context
+      if (lowerPrompt.includes("name") || lowerPrompt.includes("employee's name") || hasExplicitFieldList) {
+        employeeFields.name = {
+          type: "string",
+          description: "Employee's first name."
+        };
+      }
+      
+      // Always include role if mentioned or in explicit list
+      if (lowerPrompt.includes("role") || lowerPrompt.includes("job title") || hasExplicitFieldList) {
+        employeeFields.role = {
+          type: "string",
+          description: "Employee's job title."
+        };
+      }
+      
+      // Always include team if mentioned or in explicit list
+      if (lowerPrompt.includes("team") || hasExplicitFieldList) {
+        employeeFields.team = {
+          type: "string",
+          description: "Team the employee is joining."
+        };
+      }
+      
+      // Always include start_date if mentioned or in explicit list
+      // Handle both "start date" (with space) and "start_date" (with underscore)
+      if (lowerPrompt.includes("start date") || lowerPrompt.includes("start_date") || hasExplicitFieldList) {
+        employeeFields.start_date = {
+          type: "string",
+          format: "date",
+          description: "Employee start date."
+        };
+      }
+      
+      return {
+        message: {
+          type: "string",
+          description: "The complete welcome message, ready to send."
+        },
+        employee: {
+          type: "object",
+          properties: employeeFields
+        }
+      };
+    }
+    
+    // Fallback: Simple heuristic-based generation for other prompts
+    const properties: Record<string, any> = {};
     
     // Common fields that might be mentioned
     if (lowerPrompt.includes("name") || lowerPrompt.includes("subject")) {
@@ -1021,9 +1080,29 @@ export default function Home() {
                                       await new Promise(resolve => setTimeout(resolve, 1500));
                                       
                                       // Generate JSON schema based on prompt
+                                      const properties = generateSchemaFromPrompt(generatePrompt);
+                                      const lowerPrompt = generatePrompt.toLowerCase();
+                                      
+                                      // Determine title from prompt
+                                      let title = "GeneratedSchema";
+                                      if (lowerPrompt.includes("welcome") && lowerPrompt.includes("message")) {
+                                        title = "WelcomeMessage";
+                                      } else if (lowerPrompt.includes("schema for")) {
+                                        // Try to extract a title from the prompt
+                                        const match = generatePrompt.match(/schema for (?:a |an )?([^,\.]+)/i);
+                                        if (match && match[1]) {
+                                          title = match[1].trim()
+                                            .split(/\s+/)
+                                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                            .join("");
+                                        }
+                                      }
+                                      
                                       const generatedSchema = {
+                                        "$schema": "http://json-schema.org/draft-07/schema#",
+                                        title: title,
                                         type: "object",
-                                        properties: generateSchemaFromPrompt(generatePrompt),
+                                        properties: properties,
                                       };
                                       
                                       // Update based on current mode
@@ -1031,15 +1110,29 @@ export default function Home() {
                                         setJsonSchemaText(JSON.stringify(generatedSchema, null, 2));
                                       } else {
                                         // Convert to properties array for basic mode
-                                        const properties: JsonProperty[] = Object.entries(generatedSchema.properties).map(
-                                          ([name, prop]: [string, any]) => ({
-                                            id: `prop-${name}-${Date.now()}`,
-                                            name,
-                                            type: prop.type === "string" ? "STR" : prop.type === "number" ? "NUM" : prop.type === "boolean" ? "BOOL" : "STR",
-                                            description: prop.description || "",
-                                          })
-                                        );
-                                        setJsonProperties(properties);
+                                        // Note: Basic mode doesn't support nested objects, so we flatten them
+                                        const propertiesArray: JsonProperty[] = [];
+                                        Object.entries(generatedSchema.properties).forEach(([name, prop]: [string, any]) => {
+                                          if (prop.type === "object" && prop.properties) {
+                                            // For nested objects, add each nested property with a prefix
+                                            Object.entries(prop.properties).forEach(([nestedName, nestedProp]: [string, any]) => {
+                                              propertiesArray.push({
+                                                id: `prop-${name}-${nestedName}-${Date.now()}`,
+                                                name: `${name}.${nestedName}`,
+                                                type: nestedProp.type === "string" ? "STR" : nestedProp.type === "number" ? "NUM" : nestedProp.type === "boolean" ? "BOOL" : "STR",
+                                                description: nestedProp.description || "",
+                                              });
+                                            });
+                                          } else {
+                                            propertiesArray.push({
+                                              id: `prop-${name}-${Date.now()}`,
+                                              name,
+                                              type: prop.type === "string" ? "STR" : prop.type === "number" ? "NUM" : prop.type === "boolean" ? "BOOL" : "STR",
+                                              description: prop.description || "",
+                                            });
+                                          }
+                                        });
+                                        setJsonProperties(propertiesArray);
                                       }
                                       
                                       setGeneratePrompt("");
@@ -1950,9 +2043,29 @@ export default function Home() {
                                       await new Promise(resolve => setTimeout(resolve, 1500));
                                       
                                       // Generate JSON schema based on prompt
+                                      const properties = generateSchemaFromPrompt(generatePrompt);
+                                      const lowerPrompt = generatePrompt.toLowerCase();
+                                      
+                                      // Determine title from prompt
+                                      let title = "GeneratedSchema";
+                                      if (lowerPrompt.includes("welcome") && lowerPrompt.includes("message")) {
+                                        title = "WelcomeMessage";
+                                      } else if (lowerPrompt.includes("schema for")) {
+                                        // Try to extract a title from the prompt
+                                        const match = generatePrompt.match(/schema for (?:a |an )?([^,\.]+)/i);
+                                        if (match && match[1]) {
+                                          title = match[1].trim()
+                                            .split(/\s+/)
+                                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                            .join("");
+                                        }
+                                      }
+                                      
                                       const generatedSchema = {
+                                        "$schema": "http://json-schema.org/draft-07/schema#",
+                                        title: title,
                                         type: "object",
-                                        properties: generateSchemaFromPrompt(generatePrompt),
+                                        properties: properties,
                                       };
                                       
                                       // Update based on current mode
@@ -1960,15 +2073,29 @@ export default function Home() {
                                         setJsonSchemaText(JSON.stringify(generatedSchema, null, 2));
                                       } else {
                                         // Convert to properties array for basic mode
-                                        const properties: JsonProperty[] = Object.entries(generatedSchema.properties).map(
-                                          ([name, prop]: [string, any]) => ({
-                                            id: `prop-${name}-${Date.now()}`,
-                                            name,
-                                            type: prop.type === "string" ? "STR" : prop.type === "number" ? "NUM" : prop.type === "boolean" ? "BOOL" : "STR",
-                                            description: prop.description || "",
-                                          })
-                                        );
-                                        setJsonProperties(properties);
+                                        // Note: Basic mode doesn't support nested objects, so we flatten them
+                                        const propertiesArray: JsonProperty[] = [];
+                                        Object.entries(generatedSchema.properties).forEach(([name, prop]: [string, any]) => {
+                                          if (prop.type === "object" && prop.properties) {
+                                            // For nested objects, add each nested property with a prefix
+                                            Object.entries(prop.properties).forEach(([nestedName, nestedProp]: [string, any]) => {
+                                              propertiesArray.push({
+                                                id: `prop-${name}-${nestedName}-${Date.now()}`,
+                                                name: `${name}.${nestedName}`,
+                                                type: nestedProp.type === "string" ? "STR" : nestedProp.type === "number" ? "NUM" : nestedProp.type === "boolean" ? "BOOL" : "STR",
+                                                description: nestedProp.description || "",
+                                              });
+                                            });
+                                          } else {
+                                            propertiesArray.push({
+                                              id: `prop-${name}-${Date.now()}`,
+                                              name,
+                                              type: prop.type === "string" ? "STR" : prop.type === "number" ? "NUM" : prop.type === "boolean" ? "BOOL" : "STR",
+                                              description: prop.description || "",
+                                            });
+                                          }
+                                        });
+                                        setJsonProperties(propertiesArray);
                                       }
                                       
                                       setGeneratePrompt("");
@@ -2487,7 +2614,7 @@ export default function Home() {
       {/* Variable Dropdown for SMS and Prompt - Popover version */}
       {showVariablePicker && (pickerContext === "sms" || pickerContext === "aiPrompt") && (
         <div 
-          className="variable-popover fixed z-50 bg-white border-l border-r border-b border-[#e0dede] rounded-lg shadow-lg w-[400px] max-h-[400px] flex flex-col"
+          className="variable-popover fixed z-50 bg-white border-l border-r border-b border-t-0 border-[#e0dede] rounded-lg shadow-lg w-[400px] max-h-[400px] flex flex-col"
           style={{
             top: `${variablePopoverPosition.top}px`,
             left: `${variablePopoverPosition.left}px`,
@@ -2511,43 +2638,55 @@ export default function Home() {
               if (variables.length > 0) {
                 const currentText = pickerContext === "sms" ? smsMessage : promptMessage;
                 
-                // Get current cursor position from the textarea
-                // Get current cursor position from the textarea
-                const textareaId = pickerContext === "sms" ? 'sms-message' : 'prompt-textarea';
-                const textarea = document.getElementById(textareaId);
-                let currentCursorPos = currentText.length; // Default to end
-                
-                if (textarea) {
-                  const selection = window.getSelection();
-                  const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
-                  if (range && textarea.contains(range.commonAncestorContainer)) {
-                    const preCaretRange = range.cloneRange();
-                    preCaretRange.selectNodeContents(textarea);
-                    preCaretRange.setEnd(range.endContainer, range.endOffset);
-                    currentCursorPos = preCaretRange.toString().length;
-                  }
-                }
-                
-                // Find the "{{" that opened the picker (should be the last "{{" before cursor)
-                const textBeforeCursor = currentText.substring(0, currentCursorPos);
-                const lastOpenBrace = textBeforeCursor.lastIndexOf("{{");
-                
                 // Format variable as {{object.category.field}}
                 const variable = variables[variables.length - 1];
                 const variableText = `{{${variable.object}.${variable.category}.${variable.field}}}`;
                 
                 let finalText: string;
-                if (lastOpenBrace >= 0) {
-                  // Replace everything from "{{" to current cursor position
-                  const before = currentText.substring(0, lastOpenBrace);
-                  const after = currentText.substring(currentCursorPos);
-                  finalText = before + variableText + after;
+                let insertionPosition: number;
+                
+                if (openedViaHotkey) {
+                  // When opened via hotkey, find the "{{" that opened the picker
+                  const textareaId = pickerContext === "sms" ? 'sms-message' : 'prompt-textarea';
+                  const textarea = document.getElementById(textareaId);
+                  let currentCursorPos = currentText.length; // Default to end
+                  
+                  if (textarea) {
+                    const selection = window.getSelection();
+                    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+                    if (range && textarea.contains(range.commonAncestorContainer)) {
+                      const preCaretRange = range.cloneRange();
+                      preCaretRange.selectNodeContents(textarea);
+                      preCaretRange.setEnd(range.endContainer, range.endOffset);
+                      currentCursorPos = preCaretRange.toString().length;
+                    }
+                  }
+                  
+                  // Find the "{{" that opened the picker (should be the last "{{" before cursor)
+                  const textBeforeCursor = currentText.substring(0, currentCursorPos);
+                  const lastOpenBrace = textBeforeCursor.lastIndexOf("{{");
+                  
+                  if (lastOpenBrace >= 0) {
+                    // Replace everything from "{{" to current cursor position
+                    const before = currentText.substring(0, lastOpenBrace);
+                    const after = currentText.substring(currentCursorPos);
+                    finalText = before + variableText + after;
+                    insertionPosition = lastOpenBrace + variableText.length;
+                  } else {
+                    // Fallback: use saved position if we can't find "{{"
+                    const { start, end } = savedTextCursorPosition;
+                    const before = currentText.substring(0, start);
+                    const after = currentText.substring(end);
+                    finalText = before + variableText + after;
+                    insertionPosition = start + variableText.length;
+                  }
                 } else {
-                  // Fallback: use saved position if we can't find "{{"
+                  // When opened via "Add variable" button, use saved cursor position
                   const { start, end } = savedTextCursorPosition;
                   const before = currentText.substring(0, start);
                   const after = currentText.substring(end);
                   finalText = before + variableText + after;
+                  insertionPosition = start + variableText.length;
                 }
                   
                   if (pickerContext === "sms") {
@@ -2566,13 +2705,12 @@ export default function Home() {
                   
                   // Set cursor position after inserted variable
                   setTimeout(() => {
+                    const textareaId = pickerContext === "sms" ? 'sms-message' : 'prompt-textarea';
                     const textarea = document.getElementById(textareaId);
                     if (textarea) {
                       textarea.focus();
-                      // Calculate new cursor position after the inserted variable
-                      const newPosition = lastOpenBrace >= 0 
-                        ? lastOpenBrace + variableText.length
-                        : (savedTextCursorPosition.start + variableText.length);
+                      // Use the insertion position we calculated earlier
+                      const newPosition = insertionPosition;
                       
                       // Set cursor in contentEditable
                       const selection = window.getSelection();
