@@ -11,6 +11,7 @@ interface StyledTextareaProps {
   placeholder?: string;
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   onSelectionChange?: (start: number, end: number) => void;
+  onMouseDown?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export function StyledTextarea({
@@ -21,6 +22,7 @@ export function StyledTextarea({
   placeholder,
   onKeyDown,
   onSelectionChange,
+  onMouseDown,
 }: StyledTextareaProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const isUpdatingRef = useRef(false);
@@ -253,12 +255,16 @@ export function StyledTextarea({
         onInput={handleInput}
         onPaste={handlePaste}
         onKeyDown={onKeyDown}
+        onMouseDown={onMouseDown}
           className={cn(
-          "w-full min-h-[251px] resize-y border border-[#CCCCCC] rounded-md bg-white px-3 py-2 text-base outline-none focus:ring-2 focus:ring-[#5aa5e7] focus:border-[#5aa5e7]",
+          "w-full min-h-[251px] resize-y border border-[#CCCCCC] rounded-md bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-[#5aa5e7] focus:border-[#5aa5e7]",
+          "text-base leading-6 text-black",
           "overflow-y-auto",
           className
         )}
         style={{
+          fontFamily: "'Basel Grotesk', sans-serif",
+          fontWeight: 430,
           whiteSpace: "pre-wrap",
           wordWrap: "break-word",
         }}

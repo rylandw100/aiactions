@@ -123,3 +123,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Basel Grotesk font - fallback to system fonts if not loaded */
+@font-face {
+  font-family: 'Basel Grotesk';
+  font-style: normal;
+  font-weight: 430;
+  src: local('Basel Grotesk'), local('BaselGrotesk-Regular');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Basel Grotesk';
+  font-style: normal;
+  font-weight: 535;
+  src: local('Basel Grotesk Medium'), local('BaselGrotesk-Medium');
+  font-display: swap;
+}

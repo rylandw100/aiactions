@@ -63,17 +63,24 @@ export function VariableDropdown({
     stepId?: string;
   }>>([]);
 
+  // Only initialize expandedNodes when the popover first opens, not on every render
+  const hasInitializedRef = useRef(false);
+  
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !hasInitializedRef.current) {
       const shouldAutoExpand = availableSteps.length === 1;
       if (shouldAutoExpand && availableSteps[0]) {
         const firstStepId = `step-${availableSteps[0].id}`;
         setCurrentStep(availableSteps[0].id);
         setExpandedNodes(new Set([firstStepId]));
       } else {
-        setCurrentStep(null);
         setExpandedNodes(new Set());
+        setCurrentStep(null);
       }
+      hasInitializedRef.current = true;
+    } else if (!isOpen) {
+      // Reset the flag when popover closes so it initializes again on next open
+      hasInitializedRef.current = false;
     }
   }, [isOpen, availableSteps]);
 
@@ -86,18 +93,30 @@ export function VariableDropdown({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        onClose();
+      const target = event.target as HTMLElement;
+      
+      // Don't close if clicking inside the dropdown
+      if (dropdownRef.current && dropdownRef.current.contains(target)) {
+        return;
       }
+      
+      // Don't close if clicking inside a parent container with variable-popover class
+      if (target.closest?.('.variable-popover')) {
+        return;
+      }
+      
+      onClose();
     };
 
     if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
+      // Use a small delay to ensure button clicks process first
+      const timeoutId = setTimeout(() => {
+        document.addEventListener("click", handleClickOutside);
+      }, 0);
+      
       return () => {
-        document.removeEventListener("mousedown", handleClickOutside);
+        clearTimeout(timeoutId);
+        document.removeEventListener("click", handleClickOutside);
       };
     }
   }, [isOpen, onClose]);
@@ -291,10 +310,12 @@ export function VariableDropdown({
     });
     
     navigableItemsRef.current = allItems;
+    // Only set initial focus if we don't have a focused index yet
+    // Don't reset focus when items change due to expansion
     if (allItems.length > 0 && focusedIndex === -1) {
       setFocusedIndex(0);
     }
-  }, [filteredSteps, openedViaHotkey, focusedIndex, expandedNodes, currentStep]);
+  }, [filteredSteps, openedViaHotkey, expandedNodes, currentStep]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -327,6 +348,8 @@ export function VariableDropdown({
         });
       } else if (e.key === "Enter" || (e.key === "Tab" && !e.shiftKey)) {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         const focusedItem = navigableItemsRef.current[focusedIndex];
         if (focusedItem) {
           if (focusedItem.type === 'field' && focusedItem.path) {
@@ -359,27 +382,31 @@ export function VariableDropdown({
               onClose();
             }
           } else if (focusedItem.type === 'step') {
-            // Toggle step expansion
+            // Toggle step expansion - use functional update to avoid stale state
             const nodeId = focusedItem.nodeId;
-            const newExpanded = new Set(expandedNodes);
-            if (newExpanded.has(nodeId)) {
-              newExpanded.delete(nodeId);
-              setCurrentStep(null);
-            } else {
-              newExpanded.add(nodeId);
-              setCurrentStep(focusedItem.stepId || null);
-            }
-            setExpandedNodes(newExpanded);
+            setExpandedNodes((prev) => {
+              const newExpanded = new Set(prev);
+              if (newExpanded.has(nodeId)) {
+                newExpanded.delete(nodeId);
+                setCurrentStep(null);
+              } else {
+                newExpanded.add(nodeId);
+                setCurrentStep(focusedItem.stepId || null);
+              }
+              return newExpanded;
+            });
           } else if (focusedItem.type === 'object' || focusedItem.type === 'category') {
-            // Toggle object/category expansion
+            // Toggle object/category expansion - use functional update to avoid stale state
             const nodeId = focusedItem.nodeId;
-            const newExpanded = new Set(expandedNodes);
-            if (newExpanded.has(nodeId)) {
-              newExpanded.delete(nodeId);
-            } else {
-              newExpanded.add(nodeId);
-            }
-            setExpandedNodes(newExpanded);
+            setExpandedNodes((prev) => {
+              const newExpanded = new Set(prev);
+              if (newExpanded.has(nodeId)) {
+                newExpanded.delete(nodeId);
+              } else {
+                newExpanded.add(nodeId);
+              }
+              return newExpanded;
+            });
           }
         }
       } else if (e.key === "Escape") {
@@ -669,7 +696,8 @@ export function VariableDropdown({
           ) : (
             <button
               type="button"
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 if (hasChildren) {
                   toggleExpanded(nodeId);
                 }
@@ -715,8 +743,8 @@ export function VariableDropdown({
         inModal ? "relative" : "absolute top-full left-0 right-0 mt-1"
       )}
     >
-      {!hideSearchInput && (
-        <div className="p-3 border-b border-[#e0dede]">
+        {!hideSearchInput && (
+          <div className="p-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
             <Input
