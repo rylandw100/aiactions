@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +26,8 @@ import {
 import { TriggerIcon, AIIcon, SMSIcon, CloseIcon, TrashIcon } from "@/components/icons";
 
 export default function Home() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [selectedNode, setSelectedNode] = useState<SelectedNode>("aiPrompt");
   const [showVariablePicker, setShowVariablePicker] = useState(false);
   const [pickerContext, setPickerContext] = useState<"aiPrompt" | "sms">("aiPrompt");
@@ -36,6 +39,8 @@ export default function Home() {
   const [outputFormat, setOutputFormat] = useState<string>("Text");
   const [jsonSchemaMode, setJsonSchemaMode] = useState<"basic" | "advanced">("basic");
   const [workflowOption, setWorkflowOption] = useState<"opt1" | "opt2">("opt1");
+  const [isNavigationDropdownOpen, setIsNavigationDropdownOpen] = useState(false);
+  const currentPage = pathname === "/documents" ? "Documents" : "Workflows";
   
   // JSON Schema state
   type JsonProperty = {
@@ -266,6 +271,24 @@ export default function Home() {
       console.error("Error parsing JSON schema:", error);
     }
   }, [jsonSchemaText, jsonSchemaMode]);
+
+  // Close navigation dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      const target = event.target as HTMLElement;
+      if (isNavigationDropdownOpen && !target.closest('.navigation-dropdown-container')) {
+        setIsNavigationDropdownOpen(false);
+      }
+    }
+
+    if (isNavigationDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isNavigationDropdownOpen]);
+
 
   // Calculate popover position and handle click outside
   useEffect(() => {
@@ -661,20 +684,49 @@ export default function Home() {
     
     return properties;
   }
+
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#f9f7f6]">
+    <div className="h-screen w-screen overflow-hidden bg-[#f9f7f6] relative">
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-50">
         {/* Top Bar */}
         <div className="h-14 bg-[#4A0039] flex items-center justify-between px-4">
           <div className="flex items-center gap-4">
-            <div className="text-white font-medium">Rippling</div>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-[#8c8888]" />
-              <Input
-                placeholder="Search for anything (employees, apps, and more)"
-                className="pl-10 w-[456px] h-10 bg-white rounded-sm border-0"
-              />
+            <div className="relative navigation-dropdown-container">
+              <Button
+                variant="ghost"
+                onClick={() => setIsNavigationDropdownOpen(!isNavigationDropdownOpen)}
+                className="h-10 px-4 bg-white/10 hover:bg-white/20 text-white font-medium flex items-center gap-2"
+              >
+                {currentPage}
+                <ChevronDown className={`size-4 transition-transform ${isNavigationDropdownOpen ? 'rotate-180' : ''}`} />
+              </Button>
+              {isNavigationDropdownOpen && (
+                <div className="absolute top-full left-0 mt-1 bg-white rounded-md shadow-lg border border-[#e0dede] min-w-[160px] z-50">
+                  <button
+                    onClick={() => {
+                      router.push("/");
+                      setIsNavigationDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 first:rounded-t-md last:rounded-b-md ${
+                      currentPage === "Workflows" ? "bg-gray-50 font-medium" : ""
+                    }`}
+                  >
+                    Workflows
+                  </button>
+                  <button
+                    onClick={() => {
+                      router.push("/documents");
+                      setIsNavigationDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 first:rounded-t-md last:rounded-b-md ${
+                      currentPage === "Documents" ? "bg-gray-50 font-medium" : ""
+                    }`}
+                  >
+                    Documents
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-6">
@@ -693,52 +745,56 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Navigation Bar */}
-        <div className="h-18 bg-white border-b border-[#e0dede] flex items-center justify-between px-[18px] py-3">
-          <div className="flex items-center gap-3">
-            <CloseIcon className="size-6 text-black cursor-pointer" />
+        {/* Navigation Bar - Workflows */}
+        {currentPage === "Workflows" && (
+          <div className="h-18 bg-white border-b border-[#e0dede] flex items-center justify-between px-[18px] py-3">
             <div className="flex items-center gap-3">
-              <h1 className="text-black" style={{ fontFamily: "'Basel Grotesk', sans-serif", fontWeight: 535, fontSize: "20px", lineHeight: "28px", display: "flex", alignItems: "center" }}>Custom workflow 1</h1>
-              <div className="flex items-center gap-2 bg-gray-100 rounded-md p-1">
-                <button
-                  onClick={() => setWorkflowOption("opt1")}
-                  className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
-                    workflowOption === "opt1"
-                      ? "bg-white text-black shadow-sm"
-                      : "text-gray-600 hover:text-black"
-                  }`}
-                >
-                  Opt. 1
-                </button>
-                <button
-                  onClick={() => setWorkflowOption("opt2")}
-                  className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
-                    workflowOption === "opt2"
-                      ? "bg-white text-black shadow-sm"
-                      : "text-gray-600 hover:text-black"
-                  }`}
-                >
-                  Opt. 2
-                </button>
+              <CloseIcon className="size-6 text-black cursor-pointer" />
+              <div className="flex items-center gap-3">
+                <h1 className="text-black" style={{ fontFamily: "'Basel Grotesk', sans-serif", fontWeight: 535, fontSize: "20px", lineHeight: "28px", display: "flex", alignItems: "center" }}>Custom workflow 1</h1>
+                <div className="flex items-center gap-2 bg-gray-100 rounded-md p-1">
+                  <button
+                    onClick={() => setWorkflowOption("opt1")}
+                    className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
+                      workflowOption === "opt1"
+                        ? "bg-white text-black shadow-sm"
+                        : "text-gray-600 hover:text-black"
+                    }`}
+                  >
+                    Opt. 1
+                  </button>
+                  <button
+                    onClick={() => setWorkflowOption("opt2")}
+                    className={`px-3 py-1 text-sm font-medium rounded transition-colors ${
+                      workflowOption === "opt2"
+                        ? "bg-white text-black shadow-sm"
+                        : "text-gray-600 hover:text-black"
+                    }`}
+                  >
+                    Opt. 2
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className="size-2 rounded-full bg-[#bfbebe]" />
-              <span className="text-sm text-[#595555]">Unpublished</span>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="size-2 rounded-full bg-[#bfbebe]" />
+                <span className="text-sm text-[#595555]">Unpublished</span>
+              </div>
+              <div className="w-px h-6 bg-[#e0dede]" />
+              <Button className="bg-[#7A005D] text-white hover:bg-[#7A005D]/90 h-10">
+                Save
+              </Button>
+              <MoreHorizontal className="size-6 text-[#8c8888] cursor-pointer" />
             </div>
-            <div className="w-px h-6 bg-[#e0dede]" />
-            <Button className="bg-[#7A005D] text-white hover:bg-[#7A005D]/90 h-10">
-              Save
-            </Button>
-            <MoreHorizontal className="size-6 text-[#8c8888] cursor-pointer" />
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Main Content */}
-      {workflowOption === "opt1" && (
+      {/* Main Content - Workflows */}
+      {currentPage === "Workflows" && (
+        <>
+        {workflowOption === "opt1" && (
       <div className="flex h-screen pt-32">
         {/* Left Panel - Form */}
         <div className="w-[600px] border-r border-[#e0dede] bg-white flex flex-col h-full">
@@ -2472,7 +2528,7 @@ export default function Home() {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-base leading-6 text-black mb-2" style={{ fontFamily: "'Basel Grotesk', sans-serif", fontWeight: 535 }}>
                         Time zone <span className="text-[#c3402c]">*</span>
@@ -2502,6 +2558,26 @@ export default function Home() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Footer - Fixed at bottom */}
+          <div className="border-t border-[#e0dede] bg-white p-4 flex items-center justify-between h-16 shrink-0">
+            <div className="flex items-center gap-3">
+              <Button variant="destructive" className="bg-[#bb3d2a] text-white hover:bg-[#bb3d2a]/90 h-10">
+                Remove
+              </Button>
+              <Button variant="outline" className="border-[#d3d3d3] h-10">
+                Duplicate
+              </Button>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button variant="outline" className="border-[#d3d3d3] h-10">
+                Cancel
+              </Button>
+            <Button className="bg-[#7A005D] text-white hover:bg-[#7A005D]/90 h-10">
+              Save
+            </Button>
+            </div>
           </div>
         </div>
 
@@ -2609,6 +2685,8 @@ export default function Home() {
           </div>
         </div>
       </div>
+      )}
+        </>
       )}
 
       {/* Variable Dropdown for SMS and Prompt - Popover version */}

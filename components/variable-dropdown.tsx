@@ -63,26 +63,53 @@ export function VariableDropdown({
     stepId?: string;
   }>>([]);
 
+  // Helper function to recursively collect all node IDs
+  const collectAllNodeIds = (node: VariableNode, ids: Set<string> = new Set()): Set<string> => {
+    const nodeId = `${node.type}-${node.id}`;
+    ids.add(nodeId);
+    
+    if (node.children) {
+      node.children.forEach((child) => {
+        collectAllNodeIds(child, ids);
+      });
+    }
+    
+    return ids;
+  };
+
   // Only initialize expandedNodes when the popover first opens, not on every render
   const hasInitializedRef = useRef(false);
   
   useEffect(() => {
     if (isOpen && !hasInitializedRef.current) {
-      const shouldAutoExpand = availableSteps.length === 1;
-      if (shouldAutoExpand && availableSteps[0]) {
-        const firstStepId = `step-${availableSteps[0].id}`;
-        setCurrentStep(availableSteps[0].id);
-        setExpandedNodes(new Set([firstStepId]));
+      if (inModal) {
+        // Auto-expand everything when in modal/panel mode
+        const allNodeIds = new Set<string>();
+        availableSteps.forEach((step) => {
+          collectAllNodeIds(step, allNodeIds);
+        });
+        setExpandedNodes(allNodeIds);
+        if (availableSteps.length > 0) {
+          setCurrentStep(availableSteps[0].id);
+        }
       } else {
-        setExpandedNodes(new Set());
-        setCurrentStep(null);
+        // Original behavior for popover mode
+        const shouldAutoExpand = availableSteps.length === 1;
+        if (shouldAutoExpand && availableSteps[0]) {
+          const firstStepId = `step-${availableSteps[0].id}`;
+          setCurrentStep(availableSteps[0].id);
+          setExpandedNodes(new Set([firstStepId]));
+        } else {
+          setExpandedNodes(new Set());
+          setCurrentStep(null);
+        }
       }
       hasInitializedRef.current = true;
     } else if (!isOpen) {
       // Reset the flag when popover closes so it initializes again on next open
       hasInitializedRef.current = false;
     }
-  }, [isOpen, availableSteps]);
+  }, [isOpen, availableSteps, inModal]);
 
   // Update search query when initialSearchQuery changes
   useEffect(() => {
@@ -739,8 +766,10 @@ export function VariableDropdown({
     <div
       ref={dropdownRef}
       className={cn(
-        "bg-white rounded-lg shadow-lg border border-[#e0dede] z-50 max-h-[400px] flex flex-col",
-        inModal ? "relative" : "absolute top-full left-0 right-0 mt-1"
+        "flex flex-col",
+        inModal 
+          ? "relative h-full" 
+          : "bg-white rounded-lg shadow-lg border border-[#e0dede] z-50 max-h-[400px] absolute top-full left-0 right-0 mt-1"
       )}
     >
         {!hideSearchInput && (
