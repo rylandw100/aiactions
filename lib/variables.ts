@@ -3042,7 +3042,7 @@ export function generateDocumentVariables(): VariableNode[] {
     }
     
     if (updatedNode.children) {
-      updatedNode.children = updatedNode.children.map(child => updatePaths(child, newStep));
+      updatedNode.children = updatedNode.children.map((child: VariableNode) => updatePaths(child, newStep));
     }
     
     return updatedNode;
