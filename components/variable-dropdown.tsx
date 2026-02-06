@@ -199,7 +199,7 @@ export function VariableDropdown({
     } else if (focusedItem.type === 'step') {
       // Toggle step expansion - match click behavior
       const isCurrentStep = currentStep === focusedItem.stepId;
-      const newStep = isCurrentStep ? null : focusedItem.stepId;
+      const newStep = isCurrentStep ? null : (focusedItem.stepId || null);
       setCurrentStep(newStep);
       if (newStep) {
         // Expand the step
