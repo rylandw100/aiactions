@@ -927,7 +927,6 @@ export default function DocumentsPage() {
                   isUserTypingRef.current = false;
                 }, 0);
               }}
-              ref={documentEditorRef}
             />
           </div>
         </div>
