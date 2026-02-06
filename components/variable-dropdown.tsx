@@ -96,10 +96,22 @@ export function VariableDropdown({
         // Original behavior for popover mode
         const shouldAutoExpand = availableSteps.length === 1;
         if (shouldAutoExpand && availableSteps[0]) {
-          const firstStepId = `step-${availableSteps[0].id}`;
-          setCurrentStep(availableSteps[0].id);
-          setExpandedNodes(new Set([firstStepId]));
+          const firstStepId = `${availableSteps[0].type}-${availableSteps[0].id}`;
+          // Check if it's a step or an object
+          if (availableSteps[0].type === 'step') {
+            setCurrentStep(availableSteps[0].id);
+            setExpandedNodes(new Set([firstStepId]));
+          } else if (availableSteps[0].type === 'object') {
+            // For objects, don't set currentStep, but expand the object
+            setCurrentStep(null);
+            setExpandedNodes(new Set([firstStepId]));
+          } else {
+            setExpandedNodes(new Set());
+            setCurrentStep(null);
+          }
         } else {
+          // Multiple items (like documents page with Employee + Document custom variables)
+          // Don't auto-expand, but ensure objects are in the list
           setExpandedNodes(new Set());
           setCurrentStep(null);
         }
@@ -108,8 +120,12 @@ export function VariableDropdown({
     } else if (!isOpen) {
       // Reset the flag when popover closes so it initializes again on next open
       hasInitializedRef.current = false;
+      // Reset focused index when popover closes
+      if (openedViaHotkey) {
+        setFocusedIndex(-1);
+      }
     }
-  }, [isOpen, availableSteps, inModal]);
+  }, [isOpen, availableSteps, inModal, openedViaHotkey]);
 
   // Update search query when initialSearchQuery changes
   useEffect(() => {
@@ -117,6 +133,14 @@ export function VariableDropdown({
       setSearchQuery(initialSearchQuery);
     }
   }, [initialSearchQuery]);
+
+  // Reset focusedIndex when popover closes via hotkey
+  useEffect(() => {
+    if (!isOpen && openedViaHotkey) {
+      // Reset when popover closes
+      setFocusedIndex(-1);
+    }
+  }, [isOpen, openedViaHotkey]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -156,6 +180,57 @@ export function VariableDropdown({
       newExpanded.add(nodeId);
     }
     setExpandedNodes(newExpanded);
+  };
+
+  // Unified function to activate the currently focused item (used by Tab, Enter, and clicks)
+  const activateActiveItem = () => {
+    if (focusedIndex < 0 || focusedIndex >= navigableItemsRef.current.length) {
+      return;
+    }
+
+    const focusedItem = navigableItemsRef.current[focusedIndex];
+    if (!focusedItem) {
+      return;
+    }
+
+    if (focusedItem.type === 'field' && focusedItem.path) {
+      // Select field
+      handleSelect(focusedItem.path);
+    } else if (focusedItem.type === 'step') {
+      // Toggle step expansion - match click behavior
+      const isCurrentStep = currentStep === focusedItem.stepId;
+      const newStep = isCurrentStep ? null : focusedItem.stepId;
+      setCurrentStep(newStep);
+      if (newStep) {
+        // Expand the step
+        setExpandedNodes((prev) => {
+          const newExpanded = new Set(prev);
+          newExpanded.add(focusedItem.nodeId);
+          return newExpanded;
+        });
+      } else {
+        // Collapse the step
+        setExpandedNodes((prev) => {
+          const newExpanded = new Set(prev);
+          newExpanded.delete(focusedItem.nodeId);
+          return newExpanded;
+        });
+      }
+      // Keep focus on the expanded step (don't move to first child)
+    } else if (focusedItem.type === 'object' || focusedItem.type === 'category') {
+      // Toggle object/category expansion
+      const nodeId = focusedItem.nodeId;
+      setExpandedNodes((prev) => {
+        const newExpanded = new Set(prev);
+        if (newExpanded.has(nodeId)) {
+          newExpanded.delete(nodeId);
+        } else {
+          newExpanded.add(nodeId);
+        }
+        return newExpanded;
+      });
+      // Keep focus on the expanded item (don't move to first child)
+    }
   };
 
   const isSelected = (path: VariablePath) => {
@@ -312,11 +387,15 @@ export function VariableDropdown({
         items.push({ type: 'field', nodeId, path: node.path, stepId: currentStepId });
       }
       
-      // Add children if the node is expanded or if it's a step that's current
+      // Add children only if the node is expanded
+      // For steps, also include children if it's the current step
       const isExpanded = expandedNodes.has(nodeId);
       const isCurrentStep = node.type === 'step' && currentStep === node.id;
       
-      if (node.children && (isExpanded || isCurrentStep || node.type === 'step')) {
+      // Include children if:
+      // 1. Node is explicitly expanded, OR
+      // 2. It's a step and it's the current step (legacy behavior for step expansion)
+      if (node.children && (isExpanded || (node.type === 'step' && isCurrentStep))) {
         node.children.forEach((child) => {
           items.push(...collectItems(child, currentStepId, level + 1));
         });
@@ -337,12 +416,21 @@ export function VariableDropdown({
     });
     
     navigableItemsRef.current = allItems;
-    // Only set initial focus if we don't have a focused index yet
-    // Don't reset focus when items change due to expansion
-    if (allItems.length > 0 && focusedIndex === -1) {
-      setFocusedIndex(0);
+    
+    // Set initial focus to first item when popover opens via hotkey
+    // This effect should run whenever the list changes or when the popover opens
+    if (allItems.length > 0 && openedViaHotkey && isOpen) {
+      // Always set to 0 if we're at -1 (first time opening or after close)
+      // This ensures the first item is highlighted when the popover opens
+      if (focusedIndex === -1) {
+        setFocusedIndex(0);
+      } else if (focusedIndex >= allItems.length) {
+        // List got shorter (e.g., after filtering) - clamp to last item
+        setFocusedIndex(Math.max(0, allItems.length - 1));
+      }
+      // If focusedIndex is already valid, keep it (don't reset)
     }
-  }, [filteredSteps, openedViaHotkey, expandedNodes, currentStep]);
+  }, [filteredSteps, openedViaHotkey, expandedNodes, currentStep, isOpen, focusedIndex]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -351,25 +439,85 @@ export function VariableDropdown({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         setFocusedIndex((prev) => {
           const next = prev < navigableItemsRef.current.length - 1 ? prev + 1 : prev;
-          // Scroll into view
+          // Scroll into view within the dropdown container
           const item = navigableItemsRef.current[next];
           if (item) {
-            const element = document.querySelector(`[data-navigable-id="${item.nodeId}"]`);
-            element?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            const element = document.querySelector(`[data-navigable-id="${item.nodeId}"]`) as HTMLElement;
+            if (element) {
+              // Find the scrollable container - look for the overflow-y-auto div inside the dropdown
+              const scrollContainer = dropdownRef.current?.querySelector('.overflow-y-auto') as HTMLElement;
+              if (scrollContainer) {
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const elementRect = element.getBoundingClientRect();
+                
+                // Check if element is outside visible area
+                if (elementRect.bottom > containerRect.bottom) {
+                  // Scroll the container, not the page
+                  const elementOffsetTop = element.offsetTop;
+                  const containerHeight = scrollContainer.clientHeight;
+                  scrollContainer.scrollTo({
+                    top: elementOffsetTop - containerHeight + element.offsetHeight + 20,
+                    behavior: "smooth"
+                  });
+                } else if (elementRect.top < containerRect.top) {
+                  // Scroll the container, not the page
+                  const elementOffsetTop = element.offsetTop;
+                  scrollContainer.scrollTo({
+                    top: elementOffsetTop - 20,
+                    behavior: "smooth"
+                  });
+                }
+              } else {
+                // Fallback: use scrollIntoView but with preventDefault already called
+                element.scrollIntoView({ block: "nearest", behavior: "smooth" });
+              }
+            }
           }
           return next;
         });
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         setFocusedIndex((prev) => {
           const next = prev > 0 ? prev - 1 : 0;
-          // Scroll into view
+          // Scroll into view within the dropdown container
           const item = navigableItemsRef.current[next];
           if (item) {
-            const element = document.querySelector(`[data-navigable-id="${item.nodeId}"]`);
-            element?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            const element = document.querySelector(`[data-navigable-id="${item.nodeId}"]`) as HTMLElement;
+            if (element) {
+              // Find the scrollable container - look for the overflow-y-auto div inside the dropdown
+              const scrollContainer = dropdownRef.current?.querySelector('.overflow-y-auto') as HTMLElement;
+              if (scrollContainer) {
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const elementRect = element.getBoundingClientRect();
+                
+                // Check if element is outside visible area
+                if (elementRect.bottom > containerRect.bottom) {
+                  // Scroll the container, not the page
+                  const elementOffsetTop = element.offsetTop;
+                  const containerHeight = scrollContainer.clientHeight;
+                  scrollContainer.scrollTo({
+                    top: elementOffsetTop - containerHeight + element.offsetHeight + 20,
+                    behavior: "smooth"
+                  });
+                } else if (elementRect.top < containerRect.top) {
+                  // Scroll the container, not the page
+                  const elementOffsetTop = element.offsetTop;
+                  scrollContainer.scrollTo({
+                    top: elementOffsetTop - 20,
+                    behavior: "smooth"
+                  });
+                }
+              } else {
+                // Fallback: use scrollIntoView but with preventDefault already called
+                element.scrollIntoView({ block: "nearest", behavior: "smooth" });
+              }
+            }
           }
           return next;
         });
@@ -377,74 +525,17 @@ export function VariableDropdown({
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        const focusedItem = navigableItemsRef.current[focusedIndex];
-        if (focusedItem) {
-          if (focusedItem.type === 'field' && focusedItem.path) {
-            // Select field
-            if (multiple) {
-              const isAlreadySelected = selectedVariables.some(
-                (v) =>
-                  v.step === focusedItem.path!.step &&
-                  v.object === focusedItem.path!.object &&
-                  v.category === focusedItem.path!.category &&
-                  v.field === focusedItem.path!.field
-              );
-              if (isAlreadySelected) {
-                onSelect(
-                  selectedVariables.filter(
-                    (v) =>
-                      !(
-                        v.step === focusedItem.path!.step &&
-                        v.object === focusedItem.path!.object &&
-                        v.category === focusedItem.path!.category &&
-                        v.field === focusedItem.path!.field
-                      )
-                  )
-                );
-              } else {
-                onSelect([...selectedVariables, focusedItem.path]);
-              }
-            } else {
-              onSelect([focusedItem.path]);
-              onClose();
-            }
-          } else if (focusedItem.type === 'step') {
-            // Toggle step expansion - use functional update to avoid stale state
-            const nodeId = focusedItem.nodeId;
-            setExpandedNodes((prev) => {
-              const newExpanded = new Set(prev);
-              if (newExpanded.has(nodeId)) {
-                newExpanded.delete(nodeId);
-                setCurrentStep(null);
-              } else {
-                newExpanded.add(nodeId);
-                setCurrentStep(focusedItem.stepId || null);
-              }
-              return newExpanded;
-            });
-          } else if (focusedItem.type === 'object' || focusedItem.type === 'category') {
-            // Toggle object/category expansion - use functional update to avoid stale state
-            const nodeId = focusedItem.nodeId;
-            setExpandedNodes((prev) => {
-              const newExpanded = new Set(prev);
-              if (newExpanded.has(nodeId)) {
-                newExpanded.delete(nodeId);
-              } else {
-                newExpanded.add(nodeId);
-              }
-              return newExpanded;
-            });
-          }
-        }
+        // Use unified activation function
+        activateActiveItem();
       } else if (e.key === "Escape") {
         e.preventDefault();
         onClose();
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true); // Use capture phase to catch TAB before browser handles it
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [openedViaHotkey, isOpen, focusedIndex, multiple, selectedVariables, onSelect, onClose, expandedNodes, currentStep]);
 
@@ -629,7 +720,9 @@ export function VariableDropdown({
       );
     }
 
-    if (node.path && currentStep !== node.path.step) {
+    // Filter by step only if we have a currentStep set (for step-based filtering)
+    // For objects at the top level (like in documents page), currentStep is null, so don't filter
+    if (node.path && currentStep !== null && currentStep !== node.path.step) {
       return null;
     }
 
@@ -799,9 +892,11 @@ export function VariableDropdown({
         ) : (
           <div className="space-y-0">
             {filteredSteps.map((step) => {
-              // Only render the step node itself, not its children initially
-              const stepNodeId = `step-${step.id}`;
-              const isCurrentStep = currentStep === step.id;
+              // Handle both steps and objects at the top level
+              const nodeId = `${step.type}-${step.id}`;
+              const isCurrentStep = step.type === 'step' && currentStep === step.id;
+              const isExpanded = expandedNodes.has(nodeId);
+              
               const getStepIcon = (stepIcon?: string) => {
                 const iconClass = "size-5 text-gray-700";
                 switch (stepIcon) {
@@ -816,61 +911,80 @@ export function VariableDropdown({
                 }
               };
 
-              const isFocused = openedViaHotkey && focusedIndex >= 0 && navigableItemsRef.current[focusedIndex]?.nodeId === stepNodeId;
-              return (
-                <div key={stepNodeId} className="mb-0.5">
-                  <button
-                    type="button"
-                    data-navigable-id={stepNodeId}
-                    onClick={() => {
-                      const newStep = isCurrentStep ? null : step.id;
-                      setCurrentStep(newStep);
-                      if (newStep) {
-                        setExpandedNodes(new Set([stepNodeId]));
-                      } else {
-                        setExpandedNodes(new Set());
-                      }
-                    }}
-                    onMouseEnter={() => {
-                      if (openedViaHotkey) {
-                        const index = navigableItemsRef.current.findIndex(item => item.nodeId === stepNodeId);
-                        if (index >= 0) {
-                          setFocusedIndex(index);
+              const isFocused = openedViaHotkey && focusedIndex >= 0 && navigableItemsRef.current[focusedIndex]?.nodeId === nodeId;
+              
+              // For steps, use the existing step rendering logic
+              if (step.type === 'step') {
+                return (
+                  <div key={nodeId} className="mb-0.5">
+                    <button
+                      type="button"
+                      data-navigable-id={nodeId}
+                      onClick={() => {
+                        const newStep = isCurrentStep ? null : step.id;
+                        setCurrentStep(newStep);
+                        if (newStep) {
+                          setExpandedNodes(new Set([nodeId]));
+                        } else {
+                          setExpandedNodes(new Set());
                         }
-                      }
-                    }}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-gray-50 text-left transition-colors",
-                      isCurrentStep && "bg-gray-50",
-                      isFocused && "bg-blue-50"
-                    )}
-                  >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      {getStepIcon(step.stepIcon)}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-900">
-                            {step.stepName || step.name}
-                          </span>
-                          {step.stepId && (
-                            <span className="text-xs text-gray-500">{step.stepId}</span>
-                          )}
+                      }}
+                      onMouseEnter={() => {
+                        if (openedViaHotkey) {
+                          const index = navigableItemsRef.current.findIndex(item => item.nodeId === nodeId);
+                          if (index >= 0) {
+                            setFocusedIndex(index);
+                          }
+                        }
+                      }}
+                      className={cn(
+                        "w-full flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-gray-50 text-left transition-colors group",
+                        isCurrentStep && "bg-gray-50",
+                        isFocused && "bg-blue-50"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {getStepIcon(step.stepIcon)}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">
+                              {step.stepName || step.name}
+                            </span>
+                            {step.stepId && (
+                              <span className="text-xs text-gray-500">{step.stepId}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    {isCurrentStep ? (
-                      <ChevronDown className="size-4 text-gray-500 flex-shrink-0" />
-                    ) : (
-                      <ChevronRight className="size-4 text-gray-500 flex-shrink-0" />
+                      <div className="flex items-center gap-2">
+                        {openedViaHotkey && (
+                          <div className={cn(
+                            "transition-opacity",
+                            isFocused ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                          )}>
+                            <span className="text-[10px] font-medium text-white bg-gray-600 px-1.5 py-0.5 rounded">
+                              TAB
+                            </span>
+                          </div>
+                        )}
+                        {isCurrentStep ? (
+                          <ChevronDown className="size-4 text-gray-500 flex-shrink-0" />
+                        ) : (
+                          <ChevronRight className="size-4 text-gray-500 flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                    {isCurrentStep && step.children && (
+                      <div className="mt-0.5">
+                        {step.children.map((child) => renderNode(child, 0, [step.name]))}
+                      </div>
                     )}
-                  </button>
-                  {isCurrentStep && step.children && (
-                    <div className="mt-0.5">
-                      {step.children.map((child) => renderNode(child, 0, [step.name]))}
-                    </div>
-                  )}
-                </div>
-              );
+                  </div>
+                );
+              }
+              
+              // For objects at the top level (like in documents page), use renderNode
+              return renderNode(step, 0, []);
             })}
           </div>
         )}

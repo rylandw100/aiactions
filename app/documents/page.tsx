@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, Code, X } from "lucide-react";
 import { VariableDropdown } from "@/components/variable-dropdown";
-import { getAvailableSteps, SelectedNode } from "@/lib/variables";
+import { getAvailableSteps, SelectedNode, generateDocumentVariables } from "@/lib/variables";
 import { VariablePath, VariableNode } from "@/components/variable-picker";
 
 interface VariableChip {
@@ -30,7 +30,7 @@ export default function DocumentsPage() {
   const isUserTypingRef = useRef(false);
   const lastContentRef = useRef<string>("");
   const savedCursorRangeRef = useRef<Range | null>(null);
-  const openedViaHotkeyRef = useRef(false);
+  const [openedViaHotkey, setOpenedViaHotkey] = useState(false);
   const [showVariablePopover, setShowVariablePopover] = useState(false);
   const [variablePopoverPosition, setVariablePopoverPosition] = useState({ top: 0, left: 0 });
   const [variableSearchQuery, setVariableSearchQuery] = useState("");
@@ -128,7 +128,7 @@ export default function DocumentsPage() {
 
 <p>a. The Consultant agrees that all inventions, discoveries, improvements, works of authorship, and other developments or creations (collectively, "Inventions") made, conceived, or reduced to practice by the Consultant, either alone or jointly with others, during the term of this Agreement and in the course of performing the Services, shall be the sole and exclusive property of the Company. The Consultant hereby assigns to the Company all right, title, and interest in and to such Inventions, including all intellectual property rights therein.</p>`);
   
-  const availableSteps = getAvailableSteps("trigger" as SelectedNode, "Text", []);
+  const availableSteps = generateDocumentVariables();
 
   // Find variable node by path to get display name
   const findVariableNode = (
@@ -834,12 +834,24 @@ export default function DocumentsPage() {
               ref={documentEditorRef}
               contentEditable
               suppressContentEditableWarning
+              spellCheck={false}
               className="h-[816px] outline-none bg-white px-16 py-12"
               style={{ 
                 fontFamily: "'Times New Roman', serif", 
                 fontSize: "13.5px", 
                 lineHeight: "1.6",
                 color: "#000"
+              }}
+              onKeyDown={(e) => {
+                // When popover is open via hotkey, prevent arrow keys and tab from being handled by contentEditable
+                // Note: We only prevent default here as a fallback. The window-level handler in VariableDropdown
+                // uses capture phase and will handle these keys first.
+                if (showVariablePopover && openedViaHotkey) {
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Tab" || e.key === "Enter" || e.key === "Escape") {
+                    // Only prevent default, don't stop propagation so window handler can receive it
+                    e.preventDefault();
+                  }
+                }
               }}
               onInput={(e) => {
                 if (isUpdatingRef.current) return;
@@ -879,7 +891,7 @@ export default function DocumentsPage() {
                         // If we can't create the range, save the current range
                         savedCursorRangeRef.current = range.cloneRange();
                       }
-                      openedViaHotkeyRef.current = true;
+                      setOpenedViaHotkey(true);
                       setVariableSearchQuery("");
                       
                       // Calculate position for popover (8px below the caret line)
@@ -915,7 +927,7 @@ export default function DocumentsPage() {
                       // Calculate position and show popover
                       calculatePosition();
                       setShowVariablePopover(true);
-                    } else if (showVariablePopover && openedViaHotkeyRef.current) {
+                    } else if (showVariablePopover && openedViaHotkey) {
                       // User is typing after "{{" - update search query
                       setVariableSearchQuery(searchText);
                     }
@@ -947,11 +959,11 @@ export default function DocumentsPage() {
               </Button>
             </div>
             <VariableDropdown
-              availableSteps={getAvailableSteps("trigger" as SelectedNode, "Text", [])}
+              availableSteps={generateDocumentVariables()}
               selectedVariables={[]}
               initialSearchQuery=""
-              hideSearchInput={openedViaHotkeyRef.current}
-              openedViaHotkey={openedViaHotkeyRef.current}
+              hideSearchInput={false}
+              openedViaHotkey={false}
               onSelect={(variables) => {
                 if (variables.length > 0 && documentEditorRef.current) {
                   const variable = variables[variables.length - 1];
@@ -1136,7 +1148,7 @@ export default function DocumentsPage() {
                   
                   // Clear saved cursor
                   savedCursorRangeRef.current = null;
-                  openedViaHotkeyRef.current = false;
+                  setOpenedViaHotkey(false);
                 }
                 // Close popover after selection
                 setShowVariablePopover(false);
@@ -1144,7 +1156,7 @@ export default function DocumentsPage() {
               }}
               onClose={() => {
                 setShowVariablePopover(false);
-                openedViaHotkeyRef.current = false;
+                setOpenedViaHotkey(false);
                 // Don't close panel - user must click X to close
               }}
               multiple={false}
@@ -1172,11 +1184,11 @@ export default function DocumentsPage() {
             }}
           >
             <VariableDropdown
-              availableSteps={getAvailableSteps("trigger" as SelectedNode, "Text", [])}
+              availableSteps={generateDocumentVariables()}
               selectedVariables={[]}
               initialSearchQuery={variableSearchQuery}
-              hideSearchInput={openedViaHotkeyRef.current}
-              openedViaHotkey={openedViaHotkeyRef.current}
+              hideSearchInput={openedViaHotkey}
+              openedViaHotkey={openedViaHotkey}
               onSelect={(variables) => {
                 if (variables.length > 0 && documentEditorRef.current) {
                   const variable = variables[variables.length - 1];
@@ -1474,16 +1486,15 @@ export default function DocumentsPage() {
                     
                     // Clear saved cursor and search query
                     savedCursorRangeRef.current = null;
-                    openedViaHotkeyRef.current = false;
+                    setOpenedViaHotkey(false);
                     setVariableSearchQuery("");
                   }
                 }
-                // Close popover after selection
                 setShowVariablePopover(false);
               }}
               onClose={() => {
                 setShowVariablePopover(false);
-                openedViaHotkeyRef.current = false;
+                setOpenedViaHotkey(false);
                 setVariableSearchQuery("");
               }}
               multiple={false}
